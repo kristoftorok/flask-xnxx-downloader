@@ -9,7 +9,7 @@ The easiest way to run this app is by using Docker to build an image from the pr
 Clone the repository:
 
 ```bash
-git clone URL
+git clone https://github.com/kristoftorok/flask-xnxx-downloader
 cd flask-xnxx-downloader
 ```
 
