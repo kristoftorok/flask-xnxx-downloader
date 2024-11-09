@@ -1,0 +1,98 @@
+<!doctype html>
+<html>
+    <head>
+        <title>Downloading...</title>
+        <style>
+            body {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+                margin: 0;
+                background: #1e272e;
+                color: #ffffff;
+                font-family: Arial, sans-serif;
+                text-align: center;
+            }
+
+            .loading-container {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 20px;
+                transition: opacity 0.5s ease;
+            }
+
+            h1 {
+                font-size: 2em;
+                color: #00aaff;
+                margin: 0;
+            }
+
+            p {
+                font-size: 1.1em;
+                color: #bdc3c7;
+                transition: opacity 0.5s ease;
+            }
+
+            .loader {
+                border: 8px solid #333;
+                border-top: 8px solid #00aaff;
+                border-radius: 50%;
+                width: 50px;
+                height: 50px;
+                animation: spin 1s linear infinite;
+            }
+
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+
+            .success-message {
+                display: none; 
+                font-size: 1.5em;
+                color: #2ecc71; 
+                margin-top: 20px;
+                transition: opacity 0.5s ease;
+            }
+        </style>
+        <script>
+            function checkDownload() {
+                fetch("/check_download/{{ video_filename }}")
+                .then(response => response.json())
+                .then(data => {
+                    if (data.downloaded) {
+                        document.querySelector(".loading-container").style.opacity = "0";
+                        setTimeout(() => {
+                            document.querySelector(".loading-container").style.display = "none";
+                            document.querySelector(".success-message").style.display = "block";
+                            document.querySelector(".success-message").style.opacity = "1";
+                        }, 500);
+
+                        setTimeout(() => {
+                            window.location.href = "/video/{{ video_filename }}";
+                        }, 2000);
+                    } else {
+                        setTimeout(checkDownload, 2000);
+                    }
+                });
+            }
+
+            window.onload = checkDownload;
+        </script>
+    </head>
+    <body>
+        <div class="loading-container">
+            <h1>Preparing Your Video</h1>
+            <div class="loader"></div>
+            <p>{{ original_name }}</p>
+            <i>If the video name is not the same it's because we can't support the translations, but the video is the same :)</i>
+            <p>Please wait while we prepare your video. You will be redirected shortly...</p>
+        </div>
+        
+        <div class="success-message">
+            Success! Your video is ready. Starting download...
+        </div>
+    </body>
+</html>
