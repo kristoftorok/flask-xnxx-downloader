@@ -7,27 +7,30 @@ import threading
 app = Flask(__name__)
 
 DOWNLOAD_FOLDER = "/tmp/videos"
-
 os.makedirs(DOWNLOAD_FOLDER, exist_ok=True)
-
 client = Client()
 
 download_status = {}
+status_lock = threading.Lock()
 
 def download_video_async(video_object, video_filename):
-    download_status[video_filename] = "in-progress"
+    with status_lock:
+        download_status[video_filename] = "in-progress"
+
     video_path = os.path.join(DOWNLOAD_FOLDER, video_filename)
-    
+
     try:
         video_object.download(downloader=threaded, quality=Quality.BEST, path=video_path)
-        download_status[video_filename] = "completed"
+        with status_lock:
+            download_status[video_filename] = "completed"
     except Exception as e:
-        download_status[video_filename] = f"error: {str(e)}" 
+        with status_lock:
+            download_status[video_filename] = f"error: {str(e)}" 
 
 @app.route('/<video_id>/<path:slug>', methods=['GET'])
 def start_download(video_id, slug):
     full_url = f"https://xnxx.com/{video_id}/{slug}"
-    
+
     try:
         video_object = client.get_video(full_url)
     except Exception as e:
@@ -35,22 +38,26 @@ def start_download(video_id, slug):
 
     sha256_name = sha256(video_object.title.encode('utf-8')).hexdigest()
     video_filename = f"{sha256_name}.mp4"
-
     video_path = os.path.join(DOWNLOAD_FOLDER, video_filename)
+
     if os.path.exists(video_path):
         return redirect(url_for('serve_video', filename=video_filename))
 
-    if video_filename not in download_status:
-        thread = threading.Thread(target=download_video_async, args=(video_object, video_filename))
-        thread.start()
+    with status_lock:
+        if video_filename not in download_status:
+            thread = threading.Thread(target=download_video_async, args=(video_object, video_filename))
+            thread.start()
 
     return render_template('downloading.html', video_filename=video_filename, original_name=video_object.title)
 
 @app.route('/check_download/<filename>', methods=['GET'])
 def check_download(filename):
-    status = download_status.get(filename, "not_started")
-    downloaded = status == "completed"
-    return jsonify({"downloaded": downloaded, "status": status})
+    with status_lock:
+        status = download_status.get(filename, "not_started")
+        downloaded = status == "completed"
+    response = jsonify({"downloaded": downloaded, "status": status})
+    response.headers['Cache-Control'] = 'no-store'
+    return response
 
 @app.route('/video/<filename>', methods=['GET'])
 def serve_video(filename):
