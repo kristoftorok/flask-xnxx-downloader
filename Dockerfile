@@ -26,4 +26,4 @@ USER xnuser
 
 EXPOSE 8000
 
-CMD ["sh", "-c", "gunicorn -w ${GUNICORN_WORKERS} --threads ${GUNICORN_THREADS} -b 0.0.0.0:8000 app:app"]
+CMD ["sh", "-c", "gunicorn -w ${GUNICORN_WORKERS} -k gevent  --threads ${GUNICORN_THREADS} -b 0.0.0.0:8000 app:app"]
